@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getCachedProviderConnectionById } from "@/lib/localDb";
+import * as passive from "@omniroute/open-sse/services/tokenRefresh/passiveCodex.ts";
+import { getCachedProviderConnectionById } from "@/lib/db/readCache";
 import { updateProviderConnection } from "@/lib/db/providers";
 import {
   getAccessToken,
@@ -51,6 +52,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     }
 
     const provider = connection.provider;
+    if (passive.isPassiveCodex(provider)) {
+      return NextResponse.json(
+        { error: passive.PASSIVE_REFRESH_MESSAGE, code: "refresh_disabled" },
+        { status: 409 }
+      );
+    }
 
     // Codex/OpenAI multi-account family-revocation cascade guard.
     // These two providers share the same Auth0 client_id and can revoke sibling
